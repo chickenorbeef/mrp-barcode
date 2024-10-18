@@ -1,0 +1,18 @@
+function doPost(e) {
+  const { sku, increment } = JSON.parse(e.postData.contents);
+  const sheet = SpreadsheetApp.openByUrl('https://docs.google.com/spreadsheets/d/1Awa1y7KTuBJbMBjpdfQq_3SG8Y6VywSeFi64GM_knc0/edit?usp=sharing').getSheetByName('Inventory');
+  
+  const data = sheet.getDataRange().getValues();
+  const skuIndex = data.findIndex(row => row[0] === sku);
+  
+  if (skuIndex === -1) {
+    return ContentService.createTextOutput(JSON.stringify({ error: 'SKU not found' })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const currentCount = data[skuIndex][1];
+  const newCount = currentCount + parseInt(increment);
+  
+  sheet.getRange(skuIndex + 1, 2).setValue(newCount);
+  
+  return ContentService.createTextOutput(JSON.stringify({ success: true, newCount })).setMimeType(ContentService.MimeType.JSON);
+}
