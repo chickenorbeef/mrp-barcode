@@ -40,7 +40,7 @@
             e.preventDefault();
             const input = document.getElementById('skuInput').value;
             const [sku, action] = input.split('_');
-            const increment = action === '1' ? 1 : -1;
+            const increment = action === '+1' ? 1 : -1;
 
             fetch('https://script.google.com/macros/s/AKfycbzt4d6DIskW3AvL_Ir05T9qDEmBlKfhy0fWZ2KoYQjt-fz3RPs1cnSElngUJPQUuGGV/exec', {
                 method: 'POST',
@@ -52,7 +52,7 @@
             })
             .then(() => {
                 const resultDiv = document.getElementById('result');
-                const newResult = `Update sent for SKU: ${sku}, Action: ${increment > 0 ? 'Plus 1' : 'Minus 1'}\n\n`;
+                const newResult = `Update sent for SKU: ${sku}, Action: ${increment > 0 ? 'Plus 1' : 'Minus 1'}\n`;
                 resultDiv.textContent = resultDiv.textContent + newResult;
                 document.getElementById('skuInput').value = ''; // Clear the input field
                 document.getElementById('skuInput').focus(); // Refocus on the input field
