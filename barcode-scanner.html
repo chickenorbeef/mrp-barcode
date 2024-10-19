@@ -3,29 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventory Update</title>
+    <title>Wooj Inventory Scanner</title>
+    <link href='https://fonts.googleapis.com/css?family=Nunito Sans' rel='stylesheet'>
     <style>
         body {
             user-select: none;
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
+            font-family: 'Nunito Sans', sans-serif;
+            font-size: 22px;
+            font-weight: 400;
+            background-color:#f6f6ea;
+
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
         }
+
         #skuInput {
             user-select: text;
             -webkit-user-select: text;
             -moz-user-select: text;
             -ms-user-select: text;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
         }
+
+        .container {
+            width: 100%;
+            max-width: 800px; /* Adjust this value as needed */
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1{
+            margin-bottom: 20px;
+            width:100%;
+            text-align: center;
+        }
+
+        form{
+            margin-top: 20px;
+            width:100%;
+        }
+
+        button{
+            width:100%;
+            padding:10px;
+            visibility: hidden;
+        }
+
+        #result p {
+        margin: 0;
+        padding: 5px 0;
+        border-bottom: 1px solid #ddd;
+        }
+
+        #result p:first-child {
+            border-top: 1px solid #ddd;
+        }
+
+        #result .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        #result .result-item:first-child {
+            border-top: 1px solid #ddd;
+        }
+
+        #result .sku {
+            text-align: left;
+        }
+
+        #result .increment {
+            text-align: right;
+        }
+
+        #result .positive {
+            color: green;
+        }
+
+        #result .negative {
+            color: red;
+        }
+
+        #result .error {
+            color: red;
+            font-style: italic;
+        }
+
+
+
     </style>
 </head>
 <body>
-    <h1>Inventory Update</h1>
-    <form id="inventoryForm">
-        <input type="text" id="skuInput" placeholder="Enter SKU (e.g. SKU_+1 or SKU_-1)" required autofocus>
-        <button type="submit">Update Inventory</button>
-    </form>
-    <div id="result"></div>
+    
+    <div class="container">
+        <h1>Inventory Update</h1>
+        <form id="inventoryForm">
+            <input type="text" id="skuInput" placeholder="QR code scan" required autofocus>
+            <button id="submit" type="submit">Scan</button>
+        </form>
+
+        <div class="container">
+            <div id="result"></div>
+        </div>
+    </div>
 
     <script>
         // Prevent cursor from leaving the input field
@@ -39,7 +129,11 @@
         document.getElementById('inventoryForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const input = document.getElementById('skuInput').value;
+
+            //look for a _ in the SKU scan, split it
             const [sku, action] = input.split('_');
+
+            //if the sku scan contains '_add' at the end, +1, if not, -1
             const increment = action === 'add' ? 1 : -1;
 
             fetch('https://script.google.com/macros/s/AKfycbzt4d6DIskW3AvL_Ir05T9qDEmBlKfhy0fWZ2KoYQjt-fz3RPs1cnSElngUJPQUuGGV/exec', {
@@ -52,15 +146,36 @@
             })
             .then(() => {
                 const resultDiv = document.getElementById('result');
-                const newResult = `Update sent for SKU: ${sku}, Action: ${increment > 0 ? 'Plus 1' : 'Minus 1'}\n`;
-                resultDiv.textContent = resultDiv.textContent + newResult;
+                const newResultElement = document.createElement('div');
+                newResultElement.className = 'result-item';
+
+                const skuSpan = document.createElement('span');
+                skuSpan.className = 'sku';
+                skuSpan.textContent = `SKU: ${sku}`;
+
+                const incrementSpan = document.createElement('span');
+                incrementSpan.className = `increment ${increment > 0 ? 'positive' : 'negative'}`;
+                incrementSpan.textContent = increment > 0 ? '+1' : '-1';
+
+                newResultElement.appendChild(skuSpan);
+                newResultElement.appendChild(incrementSpan);
+
+                resultDiv.insertBefore(newResultElement, resultDiv.firstChild);
+
+                // Limit to 5 results
+                while (resultDiv.children.length > 5) {
+                    resultDiv.removeChild(resultDiv.lastChild);
+                }
+
                 document.getElementById('skuInput').value = ''; // Clear the input field
                 document.getElementById('skuInput').focus(); // Refocus on the input field
             })
             .catch(error => {
                 const resultDiv = document.getElementById('result');
-                const newResult = `Error: ${error.message}\n`;
-                resultDiv.textContent = resultDiv.textContent + newResult;
+                const newResultElement = document.createElement('div');
+                newResultElement.className = 'result-item error';
+                newResultElement.textContent = `Error: ${error.message}`;
+                resultDiv.insertBefore(newResultElement, resultDiv.firstChild);
             });
         });
     </script>
