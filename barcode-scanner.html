@@ -34,7 +34,6 @@
 
         .container {
             width: 100%;
-            max-width: 800px; /* Adjust this value as needed */
             padding: 20px;
             box-sizing: border-box;
         }
@@ -48,6 +47,7 @@
         form{
             margin-top: 20px;
             width:100%;
+            text-align: center;
         }
 
         button{
@@ -136,7 +136,7 @@
             //if the sku scan contains '_add' at the end, +1, if not, -1
             const increment = action === 'add' ? 1 : -1;
 
-            fetch('https://script.google.com/macros/s/AKfycbzt4d6DIskW3AvL_Ir05T9qDEmBlKfhy0fWZ2KoYQjt-fz3RPs1cnSElngUJPQUuGGV/exec', {
+            fetch('https://script.google.com/macros/s/AKfycbwgkp9Iy1-zh8VU6eGwwC6jVUOO50oyDum0dH5p71hhpV6_z8XYr4-aZ60DnIxRv4Rk/exec', {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: {

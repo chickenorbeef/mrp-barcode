@@ -1,6 +1,6 @@
 function doPost(e) {
   const { sku, increment } = JSON.parse(e.postData.contents);
-  const sheet = SpreadsheetApp.openByUrl('https://docs.google.com/spreadsheets/d/1Awa1y7KTuBJbMBjpdfQq_3SG8Y6VywSeFi64GM_knc0/edit?usp=sharing').getSheetByName('Inventory');
+  const sheet = SpreadsheetApp.openByUrl('https://docs.google.com/spreadsheets/d/1nsltyu01ez7I7TRpaIxxGQn_-PyLv9qtSt8woWRzo6g/edit?usp=sharing').getSheetByName('Parts');
   
   const data = sheet.getDataRange().getValues();
   const skuIndex = data.findIndex(row => row[0] === sku);
@@ -9,10 +9,10 @@ function doPost(e) {
     return ContentService.createTextOutput(JSON.stringify({ error: 'SKU not found' })).setMimeType(ContentService.MimeType.JSON);
   }
   
-  const currentCount = data[skuIndex][1];
+  const currentCount = data[skuIndex][3];
   const newCount = currentCount + parseInt(increment);
   
-  sheet.getRange(skuIndex + 1, 2).setValue(newCount);
+  sheet.getRange(skuIndex + 1, 4).setValue(newCount);
   
   return ContentService.createTextOutput(JSON.stringify({ success: true, newCount })).setMimeType(ContentService.MimeType.JSON);
 }
