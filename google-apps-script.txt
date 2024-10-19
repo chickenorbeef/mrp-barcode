@@ -1,18 +1,35 @@
 function doPost(e) {
   const { sku, increment } = JSON.parse(e.postData.contents);
+  
+  // Add to queue instead of updating immediately
+  addToQueue(sku, increment);
+  
+  return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'Update queued' })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function addToQueue(sku, increment) {
+  const queue = PropertiesService.getScriptProperties().getProperty('updateQueue') || '[]';
+  const queueArray = JSON.parse(queue);
+  queueArray.push({ sku, increment });
+  PropertiesService.getScriptProperties().setProperty('updateQueue', JSON.stringify(queueArray));
+}
+
+function processQueue() {
   const sheet = SpreadsheetApp.openByUrl('https://docs.google.com/spreadsheets/d/1nsltyu01ez7I7TRpaIxxGQn_-PyLv9qtSt8woWRzo6g/edit?usp=sharing').getSheetByName('Parts');
-  
   const data = sheet.getDataRange().getValues();
-  const skuIndex = data.findIndex(row => row[0] === sku);
   
-  if (skuIndex === -1) {
-    return ContentService.createTextOutput(JSON.stringify({ error: 'SKU not found' })).setMimeType(ContentService.MimeType.JSON);
-  }
+  const queue = PropertiesService.getScriptProperties().getProperty('updateQueue') || '[]';
+  const queueArray = JSON.parse(queue);
   
-  const currentCount = data[skuIndex][3];
-  const newCount = currentCount + parseInt(increment);
+  queueArray.forEach(({ sku, increment }) => {
+    const skuIndex = data.findIndex(row => row[0] === sku);
+    if (skuIndex !== -1) {
+      data[skuIndex][3] += parseInt(increment);
+    }
+  });
   
-  sheet.getRange(skuIndex + 1, 4).setValue(newCount);
+  sheet.getRange(1, 1, data.length, data[0].length).setValues(data);
   
-  return ContentService.createTextOutput(JSON.stringify({ success: true, newCount })).setMimeType(ContentService.MimeType.JSON);
+  // Clear the queue
+  PropertiesService.getScriptProperties().setProperty('updateQueue', '[]');
 }
