@@ -12,10 +12,9 @@
             -moz-user-select: none;
             -ms-user-select: none;
             font-family: 'Nunito Sans', sans-serif;
-            font-size: 22px;
+            /*font-size: 22px;*/
             font-weight: 400;
             background-color:#f6f6ea;
-
             align-items: center;
             justify-content: center;
             min-height: 100vh;
@@ -39,7 +38,8 @@
         }
 
         h1{
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+            font-size:22px;
             width:100%;
             text-align: center;
         }
@@ -60,6 +60,7 @@
         margin: 0;
         padding: 5px 0;
         border-bottom: 1px solid #ddd;
+        font-size:8px; 
         }
 
         #result p:first-child {
@@ -151,7 +152,7 @@
 
                 const skuSpan = document.createElement('span');
                 skuSpan.className = 'sku';
-                skuSpan.textContent = `SKU: ${sku}`;
+                skuSpan.textContent = `${sku}`;
 
                 const incrementSpan = document.createElement('span');
                 incrementSpan.className = `increment ${increment > 0 ? 'positive' : 'negative'}`;
