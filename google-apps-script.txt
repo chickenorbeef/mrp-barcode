@@ -1,35 +1,118 @@
-function doPost(e) {
-  const { sku, increment } = JSON.parse(e.postData.contents);
-  
-  // Add to queue instead of updating immediately
-  addToQueue(sku, increment);
-  
-  return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'Update queued' })).setMimeType(ContentService.MimeType.JSON);
-}
-
+// Queue structure with timestamps and unique IDs
 function addToQueue(sku, increment) {
   const queue = PropertiesService.getScriptProperties().getProperty('updateQueue') || '[]';
   const queueArray = JSON.parse(queue);
-  queueArray.push({ sku, increment });
+  
+  // Add timestamp and unique ID to each queue item
+  queueArray.push({
+    id: Utilities.getUuid(),
+    sku,
+    increment,
+    timestamp: new Date().getTime(),
+    attempts: 0
+  });
+  
+  // Sort by timestamp to maintain FIFO order
+  queueArray.sort((a, b) => a.timestamp - b.timestamp);
+  
   PropertiesService.getScriptProperties().setProperty('updateQueue', JSON.stringify(queueArray));
 }
 
+// Process queue with batching and error handling
 function processQueue() {
-  const sheet = SpreadsheetApp.openByUrl('https://docs.google.com/spreadsheets/d/1nsltyu01ez7I7TRpaIxxGQn_-PyLv9qtSt8woWRzo6g/edit?usp=sharing').getSheetByName('Parts');
-  const data = sheet.getDataRange().getValues();
+  const lock = LockService.getScriptLock();
+  try {
+    // Wait up to 30 seconds for other processes to complete
+    lock.waitLock(30000);
+    
+    const queue = PropertiesService.getScriptProperties().getProperty('updateQueue') || '[]';
+    let queueArray = JSON.parse(queue);
+    
+    if (queueArray.length === 0) return;
+    
+    const sheet = SpreadsheetApp.openByUrl('https://docs.google.com/spreadsheets/d/1nsltyu01ez7I7TRpaIxxGQn_-PyLv9qtSt8woWRzo6g/edit?usp=sharing').getSheetByName('Parts');
+    const data = sheet.getDataRange().getValues();
+    
+    // Process updates in batches
+    const batchSize = 50;
+    const successfulUpdates = [];
+    const failedUpdates = [];
+    
+    // Create a map of SKUs to their current totals
+    const skuUpdates = {};
+    
+    // Aggregate all updates for each SKU
+    queueArray.forEach(item => {
+      if (!skuUpdates[item.sku]) {
+        skuUpdates[item.sku] = 0;
+      }
+      skuUpdates[item.sku] += parseInt(item.increment);
+    });
+    
+    // Apply the aggregated updates to the sheet
+    Object.entries(skuUpdates).forEach(([sku, totalIncrement]) => {
+      const skuIndex = data.findIndex(row => row[0] === sku);
+      if (skuIndex !== -1) {
+        data[skuIndex][3] += totalIncrement;
+        successfulUpdates.push(...queueArray.filter(item => item.sku === sku));
+      } else {
+        failedUpdates.push(...queueArray.filter(item => item.sku === sku));
+      }
+    });
+    
+    // Update the sheet with all changes at once
+    sheet.getRange(1, 1, data.length, data[0].length).setValues(data);
+    
+    // Remove successful updates from queue
+    queueArray = queueArray.filter(item => 
+      !successfulUpdates.some(success => success.id === item.id)
+    );
+    
+    // Increment attempt count for failed updates
+    queueArray = queueArray.map(item => {
+      if (failedUpdates.some(failure => failure.id === item.id)) {
+        return { ...item, attempts: item.attempts + 1 };
+      }
+      return item;
+    });
+    
+    // Remove items that have failed too many times
+    queueArray = queueArray.filter(item => item.attempts < 3);
+    
+    // Update queue
+    PropertiesService.getScriptProperties().setProperty('updateQueue', JSON.stringify(queueArray));
+    
+  } catch (error) {
+    console.error('Error processing queue:', error);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function doPost(e) {
+  const { sku, increment } = JSON.parse(e.postData.contents);
   
-  const queue = PropertiesService.getScriptProperties().getProperty('updateQueue') || '[]';
-  const queueArray = JSON.parse(queue);
-  
-  queueArray.forEach(({ sku, increment }) => {
-    const skuIndex = data.findIndex(row => row[0] === sku);
-    if (skuIndex !== -1) {
-      data[skuIndex][3] += parseInt(increment);
+  try {
+    addToQueue(sku, increment);
+    
+    // Create trigger if it doesn't exist
+    const triggers = ScriptApp.getProjectTriggers();
+    if (!triggers.some(trigger => trigger.getHandlerFunction() === 'processQueue')) {
+      ScriptApp.newTrigger('processQueue')
+        .timeBased()
+        .everyMinutes(1)
+        .create();
     }
-  });
-  
-  sheet.getRange(1, 1, data.length, data[0].length).setValues(data);
-  
-  // Clear the queue
-  PropertiesService.getScriptProperties().setProperty('updateQueue', '[]');
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: 'Update queued successfully'
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      message: 'Error queueing update: ' + error.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 }

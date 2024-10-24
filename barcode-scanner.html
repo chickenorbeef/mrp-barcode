@@ -109,8 +109,9 @@
     <div class="container">
         <h1>Inventory Update</h1>
         <form id="inventoryForm">
-            <input type="text" id="skuInput" placeholder="QR code scan" required autofocus>
-            <button id="submit" type="submit">Scan</button>
+            <input type="text" id="sku" placeholder="QR code scan" required autofocus>
+            <input type="number" id="increment" style="visibility: hidden;" value="1" />
+            <button id="submit" onclick="submitUpdate()" type="submit">Scan</button>
         </form>
 
         <div class="container">
@@ -121,15 +122,15 @@
     <script>
         // Prevent cursor from leaving the input field
         document.addEventListener('mousedown', function(e) {
-            if (e.target.id !== 'skuInput') {
+            if (e.target.id !== 'sku') {
                 e.preventDefault();
-                document.getElementById('skuInput').focus();
+                document.getElementById('sku').focus();
             }
         });
 
         document.getElementById('inventoryForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            const input = document.getElementById('skuInput').value;
+            const input = document.getElementById('sku').value;
 
             //look for a _ in the SKU scan, split it
             const [sku, action] = input.split('_');
@@ -168,8 +169,8 @@
                     resultDiv.removeChild(resultDiv.lastChild);
                 }
 
-                document.getElementById('skuInput').value = ''; // Clear the input field
-                document.getElementById('skuInput').focus(); // Refocus on the input field
+                document.getElementById('sku').value = ''; // Clear the input field
+                document.getElementById('sku').focus(); // Refocus on the input field
             })
             .catch(error => {
                 const resultDiv = document.getElementById('result');
@@ -179,6 +180,34 @@
                 resultDiv.insertBefore(newResultElement, resultDiv.firstChild);
             });
         });
+    </script>
+
+    <script>
+    async function submitUpdate() {
+      const sku = document.getElementById('sku').value;
+      const increment = document.getElementById('increment').value;
+      const result = document.getElementById('result');
+      
+      try {
+        const response = await fetch('https://script.google.com/macros/s/AKfycbwgkp9Iy1-zh8VU6eGwwC6jVUOO50oyDum0dH5p71hhpV6_z8XYr4-aZ60DnIxRv4Rk/exec', {
+          method: 'POST',
+          body: JSON.stringify({ sku, increment })
+        });
+        
+        const data = await response.json();
+        result.textContent = data.message;
+        result.style.color = data.success ? 'green' : 'red';
+        
+        if (data.success) {
+          document.getElementById('sku').value = '';
+          document.getElementById('sku').focus();
+        }
+        
+      } catch (error) {
+        result.textContent = 'Error submitting update';
+        result.style.color = 'red';
+      }
+    }
     </script>
 
 </body>
